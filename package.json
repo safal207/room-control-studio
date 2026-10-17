@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node scripts/verify.mjs"
+    "check": "node scripts/verify.mjs && node --experimental-vm-modules scripts/verify-camera.mjs ."
   }
 }

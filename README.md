@@ -47,3 +47,7 @@ Checks cover local links, unique HTML IDs, JavaScript syntax and relevant state/
 The room and furniture geometry are original procedural work. Three.js 0.149.0 is vendored with its MIT notice.
 
 Creative direction and implementation: Alexey Safonov, with AI assistance. Code under MIT; preserve all third-party notices. Inspiration: the supplied Meng To visual references. No commercial relationship or endorsement is implied.
+
+## Loading-state regression
+
+Camera choices made while the 3D module loads are retained and applied when it becomes ready. `npm run check` covers the deferred import race, scenario switches and thermostat bounds using a mocked DOM/renderer. It does not certify real WebGL rendering.
