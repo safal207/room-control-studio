@@ -1,5 +1,5 @@
 import * as T from './vendor/three.module.js';
-import { lampSettings, lightingState } from './lighting.js';
+import { lampSettings, lightingState } from './lighting.js?v=2';
 export function createRoom(canvas){
  // r149 hex colours are sRGB inputs; lighting and tone mapping operate in linear space.
  T.ColorManagement.legacyMode=false;
@@ -46,7 +46,7 @@ export function createRoom(canvas){
  const acBody=box(1.15,.28,.22,.7,2.9,-4.38,cream);for(let i=0;i<4;i++)box(.95,.012,.01,.7,2.8+i*.035,-4.25,mat('#b3baad'));const acLED=sphere(.023,1.17,2.9,-4.23,mat('#a6c387'));
  const ambient=new T.HemisphereLight('#e8e3d3','#776b51',.5);scene.add(ambient);const sun=new T.DirectionalLight('#fff0cf',2);sun.position.set(3,9,5);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-9;sun.shadow.camera.right=9;sun.shadow.camera.top=9;sun.shadow.camera.bottom=-9;sun.shadow.normalBias=.025;sun.shadow.camera.near=.5;sun.shadow.camera.far=35;scene.add(sun);
  const fill=new T.DirectionalLight('#e5e8df',.6);fill.position.set(-4,6,8);scene.add(fill);
- let angle=.67,top=false,drag=false,startX=0,startA=angle,lastState;let errorHandler;const render=()=>{try{renderer.render(scene,camera)}catch(error){if(errorHandler)errorHandler(error);else throw error}};function cameraUpdate(){if(top){camera.position.set(.01,20,.1);camera.lookAt(0,0,0)}else{camera.position.set(Math.sin(angle)*18,13,Math.cos(angle)*18);camera.lookAt(0,.2,0)}render()}
+ let angle=.67,top=false,drag=false,startX=0,startA=angle,lastState;let errorHandler;const render=()=>{try{renderer.render(scene,camera)}catch(error){if(errorHandler)errorHandler(error);else throw error}};function cameraUpdate(){const fit=Math.max(1,1.25/Math.max(camera.aspect,.2));if(top){camera.position.set(.01,24*fit,.1);camera.lookAt(0,0,0)}else{camera.position.set(Math.sin(angle)*18*fit,13*fit,Math.cos(angle)*18*fit);camera.lookAt(0,.2,0)}render()}
  function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/Math.max(r.height,1);camera.updateProjectionMatrix();cameraUpdate()}
  const onDown=e=>{if(e.button!==0&&e.pointerType==='mouse')return;drag=true;startX=e.clientX;startA=angle;canvas.setPointerCapture(e.pointerId)};const onMove=e=>{if(!drag||top)return;angle=Math.max(-.15,Math.min(1.25,startA+(e.clientX-startX)*.005));cameraUpdate()};const onUp=()=>{drag=false};canvas.addEventListener('pointerdown',onDown);canvas.addEventListener('pointermove',onMove);canvas.addEventListener('pointerup',onUp);canvas.addEventListener('pointercancel',onUp);
  function update(s){

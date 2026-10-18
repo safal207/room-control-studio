@@ -17,7 +17,7 @@ export function lightingState(state = {}) {
   return { brightness, lamps,
     // A small, explicit night fill keeps furniture legible when every lamp is off.
     // Exposure stays fixed: dimming lamps must not make the renderer brighten them again.
-    exposure: 1.05, ambient: day ? .65 : .13, sun: day ? 1.9 : .04, fill: day ? .3 : .07,
+    exposure: 1.05, ambient: day ? .65 : .28, sun: day ? 1.9 : .12, fill: day ? .3 : .18,
     background: day ? '#e2dfd5' : '#bcb7ab',
     windowEmission: day ? .22 : .015, windowColor: day ? '#c5d2b9' : '#67796c',
     televisionEmission: state.scene === 'away' ? 0 : state.scene === 'cinema' ? .45 : .025

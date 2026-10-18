@@ -5,17 +5,18 @@ import * as Three from '../dist/vendor/three.module.js';
 import { lampSettings, lightingState } from '../dist/lighting.js';
 import { preset } from '../dist/state.js';
 import { roomDiagram } from '../dist/diagram.js';
-let scene, renderer;
+let scene, renderer, camera;
 class MockRenderer {
   constructor() { renderer = this; this.shadowMap = {}; }
   setPixelRatio() {} setSize() {} dispose() {}
-  render(value) { scene = value; }
+  render(value, view) { scene = value; camera=view; }
 }
 const source = fs.readFileSync(new URL('../dist/room.js', import.meta.url), 'utf8')
   .replace(/^import .*;\n/gm, '').replace('export function createRoom', 'function createRoom');
 const createRoom = new Function('T', 'devicePixelRatio', 'lampSettings', 'lightingState', source + '\nreturn createRoom;')(
   { ...Three, WebGLRenderer: MockRenderer }, 1, lampSettings, lightingState);
-const canvas = { getBoundingClientRect: () => ({ width: 800, height: 500 }), addEventListener() {}, removeEventListener() {} };
+let viewport={ width:800,height:500 };
+const canvas = { getBoundingClientRect: () => viewport, addEventListener() {}, removeEventListener() {} };
 const room = createRoom(canvas);
 const ids = ['pendant', 'floor', 'accent'];
 const lamp = id => scene.getObjectByName('lamp-' + id);
@@ -81,6 +82,17 @@ for (const id of ids) {
   assert.ok(hits.length, `Light ${id} must reach real scene geometry`);
   assert.ok(hits[0].distance > .1, `${id} source must not sit inside a closed shade`);
 }
+
+const bounds=new Three.Box3().setFromObject(scene.children.find(object=>object.isGroup));
+for(const [width,height] of [[1200,800],[390,520],[320,520]])for(const top of [false,true]){
+ viewport={width,height};room.resize();room.view(top);camera.updateMatrixWorld(true);
+ for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){
+  const point=new Three.Vector3(x,y,z).project(camera);
+  assert.ok(Math.abs(point.x)<1 && Math.abs(point.y)<1,`Complete room bounds must fit ${width}x${height}, top=${top}: ${point.x},${point.y}`);
+ }
+}
+console.log('PASS responsive camera: full room bounds remain inside 1200/390/320 canvases in model and top views.');
+
 room.dispose();
 console.log('PASS R-L02 geometry: each directed source reaches scene geometry without being enclosed by its own shade.');
 console.log('LIMIT: GPU rendering, highlights, shadow acne and physical mobile performance require the visual matrix; this is not pixel-level certification.');

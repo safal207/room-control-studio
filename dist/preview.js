@@ -48,14 +48,14 @@ function setView(value){
 }
 function setPreset(name){
   if(sceneName!=='room')return;
-  state=preset(name);slider.value=state.brightness;output.value=state.brightness+'%';world.update(state);hooks.preset=state.scene;
+  state=preset(name);document.querySelectorAll('[data-preset]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.preset===name)));slider.value=state.brightness;output.value=state.brightness+'%';world.update(state);hooks.preset=state.scene;
 }
 Object.assign(hooks,{render,setLight,setView,setPreset,getState:()=>state?structuredClone(state):null,setState(value){if(sceneName!=='room')return;state=validate(value);slider.value=state.brightness;output.value=state.brightness+'%';world.update(state)},setActive(value){parentActive=Boolean(value);sync()}});
 async function boot(){
   try{
     if(sceneName==='room'){
-      const modules=await Promise.all([import('./room.js?v=preview-light-1'),import('./state.js')]);
-      preset=modules[1].preset;validate=modules[1].validate;state=preset('evening');world=modules[0].createRoom(canvas);world.setErrorHandler?.(fail);world.update(state);
+      const modules=await Promise.all([import('./room.js?v=preview-light-2'),import('./state.js')]);
+      preset=modules[1].preset;validate=modules[1].validate;state=preset('morning');world=modules[0].createRoom(canvas);world.setErrorHandler?.(fail);world.update(state);
     }else{
       const {createTempleNightRenderer}=await import('./temple-renderer.js?v=preview-light-1');
       const quality=params.get('quality')==='high'?'high':'low';
@@ -67,6 +67,7 @@ async function boot(){
     setLight(slider.value);sync();notify('designlab:preview-ready');
   }catch(error){fail(error)}
 }
+document.querySelectorAll('[data-preset]').forEach(button=>button.addEventListener('click',()=>{try{setPreset(button.dataset.preset)}catch(error){fail(error)}}));
 slider.addEventListener('input',()=>{try{setLight(slider.value)}catch(error){fail(error)}});
 document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{try{setView(button.dataset.view)}catch(error){fail(error)}}));
 document.querySelector('.retry').addEventListener('click',()=>location.reload());

@@ -67,8 +67,11 @@ async function assertNoOverflow(test){const overflow=await test.page.evaluate(()
 try{
  const desktop=await open();await assertNoOverflow(desktop);
  if(kind==='room'){
-  await desktop.page.evaluate(()=>window.__preview.setPreset('evening'));
-  await light(desktop,75);await snapshot(desktop,'room-evening-75',{poster:true});
+  await desktop.page.locator('[data-preset=morning]').click();
+  const daylight=await snapshot(desktop,'room-daylight-preview',{poster:true});
+  assert.ok(daylight.m.mean>50,'Daylight poster must make the model readable');
+  await desktop.page.locator('[data-preset=evening]').click();
+  await light(desktop,75);await snapshot(desktop,'room-evening-75');
   await light(desktop,0);const zero=await snapshot(desktop,'room-evening-0');
   await light(desktop,100);const full=await snapshot(desktop,'room-evening-100');
   assert.ok(full.m.mean>zero.m.mean+.1,'Room slider must increase real scene brightness');assert.ok(difference(zero.bytes,full.bytes)>.2,'Room lighting must visibly change pixels');pass('room-light-monotonic',{low:zero.m.mean,high:full.m.mean});
