@@ -90,7 +90,7 @@ async function start3D() {
   loading = true; q('#retry-render').disabled = true;
   q('#render-status').textContent = 'Загружаем 3D. Пока можно менять свет на живой схеме.';
   try {
-    const { createRoom } = await import('./room.js?v=3');
+    const { createRoom } = await import('./room.js?v=light4');
     world = createRoom(q('#room'));
     world.view(desiredView);
     // The fallback stays visible until the first frame with the real state succeeds.

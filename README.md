@@ -59,3 +59,11 @@ Camera choices made while the 3D module loads are retained and applied when it b
 The original `diagram.js` floor plan is visible before the first successful 3D frame and after rendering or context-loss errors. It reacts to the same lighting, day/night and climate state as the 3D room. A visible switch lets learners compare the scheme and 3D. `assets/room-preview.svg` is generated from this scheme with the evening preset; it is an illustration, not a 3D screenshot.
 
 The controller hides the scheme only after the first state update renders successfully. Late state, resize and drag-render failures restore it, retain controls and expose a retry. The bounded controller test covers first-frame and late failures, context loss, retry, retained settings, the three lesson steps and the existing camera-loading race. DOM and GPU are mocked; real device rendering remains unverified.
+
+## Lighting behaviour and checks
+
+The 3D room now uses three warm, directed spot lights with bounded reach and one 512 px shadow map each. Furniture can occlude each lamp. The bulb meshes do not cast shadows over their own light sources; the floor-lamp source sits below its closed shade. Three.js r149 explicitly converts sRGB input colours to its linear working space, uses physical distance attenuation and retains fixed exposure while dimming.
+
+At **0%**, a switched-on lamp has zero light energy, zero bulb emission and the same unlit bulb colour as a switched-off lamp. The SVG plan agrees with that state. **Away** also removes the television emission. A small environment fill remains intentionally so the room silhouette stays legible; this is an educational lighting simulation, not a dark-room photometric measurement.
+
+`npm run check` includes `scripts/verify-lighting.mjs`: 80 combinations of lamp switches, brightness and day/night applied to real Three.js scene objects; per-lamp monotonic dimming; deterministic preset restoration; and raycasting from the sources to exclude self-blocking shades. The GPU renderer is mocked in that test. See [LIGHTING-MATRIX.md](LIGHTING-MATRIX.md) for exactly what is covered and what still needs rendered-image or physical-device verification.

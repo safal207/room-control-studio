@@ -1,0 +1,31 @@
+# Room Control — lighting verification matrix
+
+Updated 18 October 2026. This matrix separates scene/state checks from rendered output. `npm run check` passed locally after the lighting change. It does not itself run a browser or real WebGL renderer.
+
+| ID | Scenario | Action / combinations | Expected result | Current evidence |
+| --- | --- | --- | --- | --- |
+| R-L01 | Switches, dimmer and plan agree | 8 switch combinations × 0/25/50/75/100% × day/night = 80 states | A lamp emits iff switched on and brightness > 0. At 0%, energy/emission are zero and the bulb is unlit in both render state and SVG | **PASS** `verify-lighting.mjs`; real Three light/material objects, GPU mocked |
+| R-L02 | Directed light and furniture occlusion | Isolate pendant, floor lamp and accent | Each has a directed bounded cone and a shadow map; bulbs cannot shadow themselves; a source does not sit inside a closed shade | **PASS** scene properties and real Three raycasting. Visible shadows / light leakage still require rendered-image review |
+| R-L03 | Dimming is continuous and stable | Each lamp: 0 → 25 → 50 → 75 → 100 → 0% | Light energy and bulb emission increase monotonically; last value returns to zero; exposure does not compensate for dimming | **PASS** `verify-lighting.mjs`. Perceived brightness / clipped highlights require rendered-image review |
+| R-L04 | Presets restore predictably | Evening → Morning → Cinema → Away → Evening | Same final lamp energy and material colours as initial evening. Away: zero lamp and TV emission; small environment fill remains | **PASS** `verify-lighting.mjs` |
+| R-L05 | Plan and 3D share settings | Change scenario / dimmer; switch plan ↔ 3D and top ↔ orbit; resize | Same selected lights, intensity and view choices survive transitions; no cropped controls | **PASS** state and controller checks in `verify-camera.mjs`. Responsive appearance is a separate browser check |
+| R-L06 | Zero or failed WebGL | First update fails, late render fails, drag render fails, context is lost; retry | Plan stays visible and interactive; retry creates a fresh renderer and retains latest lighting state | **PASS** injected-failure controller tests; DOM and renderer mocked |
+| R-L07 | Colour, highlights, shadow edges | Morning/evening/cinema/away at 0/50/100%; orbit and top | Materials remain identifiable; no large blown highlights, flashing, detached shadows or severe shadow acne | **PENDING** rendered-image verification; source settings alone cannot certify this |
+| R-L08 | Mobile presentation and performance | 320 px, 390 px, landscape, desktop 1440 px; physical Xiaomi if available | Model and plan are legible, controls fit and respond, no frozen display or context loss during repeated interaction | **PENDING** browser/physical-device check; viewport emulation is not a physical-device result |
+
+## Reproduce locally
+
+```sh
+npm run check
+```
+
+For visual review, open the public demo, clear saved Room Control state if required, then compare the four presets in both views. Keep the hardware/browser/version and screenshots with each visual result. Do not mark R-L07 or physical-device R-L08 passed based solely on the Node checks.
+
+## Confirmed defects repaired
+
+- With brightness 0% and switches still on, bulb colours stayed lit yellow even though their energy was zero and the plan showed them off.
+- All lamp lights ignored furniture occlusion because their shadow casting was disabled. The previous room had only sunlight shadows.
+- The floor source was inside a closed shade; simply enabling lamp shadows would have blocked its own light. It is now below that shade, and luminous bulb geometry does not cast shadows.
+- The Away scene retained television emission. It is now zero.
+
+Night fill, lamp reach, fixed exposure and explicit colour-space handling were adjusted for a clearer educational comparison. Pixel appearance remains subject to the visual checks above.

@@ -1,6 +1,9 @@
 import * as T from './vendor/three.module.js';
+import { lampSettings, lightingState } from './lighting.js';
 export function createRoom(canvas){
- const renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6));renderer.outputEncoding=T.sRGBEncoding;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
+ // r149 hex colours are sRGB inputs; lighting and tone mapping operate in linear space.
+ T.ColorManagement.legacyMode=false;
+ const renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6));renderer.outputEncoding=T.sRGBEncoding;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;renderer.physicallyCorrectLights=true;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
  const scene=new T.Scene(),camera=new T.PerspectiveCamera(32,1,.1,120);scene.background=new T.Color('#e2dfd5');const root=new T.Group();scene.add(root);const materials=[];function mat(color,roughness=.78,metalness=0){const m=new T.MeshStandardMaterial({color,roughness,metalness});materials.push(m);return m}const wood=mat('#a17b50'),walnut=mat('#6c4c30'),wall=mat('#e0d8c7'),fabric=mat('#9c9e85'),pillow=mat('#d4c6a5'),dark=mat('#3f4035'),black=mat('#222925'),green=mat('#4e6641'),pot=mat('#b99d79'),cream=mat('#ede2c6');
  function box(w,h,d,x,y,z,m=wood,parent=root){const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh}function cyl(r1,r2,h,x,y,z,m=wood,segments=48,parent=root){const mesh=new T.Mesh(new T.CylinderGeometry(r1,r2,h,segments),m);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh}function sphere(r,x,y,z,m,parent=root){const mesh=new T.Mesh(new T.SphereGeometry(r,24,18),m);mesh.position.set(x,y,z);mesh.castShadow=true;parent.add(mesh);return mesh}
  // The room and every piece of furniture are built from original procedural geometry.
@@ -22,18 +25,42 @@ export function createRoom(canvas){
  // Tall plant and the small bookshelf.
  cyl(.32,.25,.6,2.65,.4,-3.5,pot);cyl(.025,.03,1.55,2.65,1.3,-3.5,walnut);for(let i=0;i<10;i++){const a=i*2.4,y=1.05+i*.13,l=sphere(.24,2.65+Math.cos(a)*.33,y,-3.5+Math.sin(a)*.3,green);l.scale.set(1.7,.24,.7);l.rotation.z=Math.sin(a)*.5}
  box(.8,1.7,.45,-2.95,.94,3.45,wood);for(let y=.3;y<1.8;y+=.48){box(.7,.04,.39,-2.95,y,3.21,walnut);for(let i=0;i<4;i++)box(.11,.26+i*.025,.22,-3.19+i*.15,y+.15,3.25,mat(['#a7ac91','#c3b393','#777e6a','#ba9072'][i]))}
- const lightMeshes={},pointLights={};function glow(id,x,y,z,power,r=.12){const m=new T.MeshStandardMaterial({color:'#f3d69f',emissive:'#ffbd60',emissiveIntensity:1});materials.push(m);lightMeshes[id]=sphere(r,x,y,z,m);const p=new T.PointLight('#ffc67d',power,12,2);p.position.set(x,y,z);scene.add(p);pointLights[id]=p}
+ const lightMeshes={},lampLights={};function glow(id,x,y,z,r=.12){
+  const settings=lampSettings[id];
+  const m=new T.MeshStandardMaterial({color:'#8c897c',emissive:'#ffbd60',emissiveIntensity:0});materials.push(m);
+  const bulb=lightMeshes[id]=sphere(r,x,y,z,m);bulb.name='bulb-'+id;
+  // The luminous bulb must not shadow the light whose origin is inside it.
+  bulb.castShadow=false;bulb.receiveShadow=false;
+  // A bounded cone uses one shadow map, rather than six point-light cube faces.
+  const light=new T.SpotLight('#ffc67d',0,settings.distance,settings.angle,.7,2);
+  light.name='lamp-'+id;light.position.set(x,y,z);light.target.position.set(...settings.target);
+  light.castShadow=true;light.shadow.mapSize.set(512,512);light.shadow.camera.near=.05;
+  light.shadow.camera.far=settings.distance;light.shadow.bias=-.0001;light.shadow.normalBias=.015;
+  scene.add(light,light.target);lampLights[id]=light;
+ }
  // Pendant hangs from an open ceiling plane for a dollhouse view.
- cyl(.018,.018,1,1.45,3.3,2.4,black);cyl(.45,.62,.22,1.45,2.7,2.4,cream);glow('pendant',1.45,2.55,2.4,18,.16);
- cyl(.23,.26,.05,-2.5,.12,1.65,black);cyl(.025,.025,1.65,-2.5,.96,1.65,black);cyl(.26,.4,.4,-2.5,1.95,1.65,cream);glow('floor',-2.5,1.8,1.65,12,.09);
- glow('accent',.7,.96,-3.65,10,.04);lightMeshes.accent.scale.set(22,.5,1);
+ cyl(.018,.018,1,1.45,3.3,2.4,black);cyl(.45,.62,.22,1.45,2.7,2.4,cream);glow('pendant',1.45,2.55,2.4,.16);
+ cyl(.23,.26,.05,-2.5,.12,1.65,black);cyl(.025,.025,1.65,-2.5,.96,1.65,black);cyl(.26,.4,.4,-2.5,1.95,1.65,cream);glow('floor',-2.5,1.71,1.65,.09);
+ glow('accent',.7,.96,-3.65,.04);lightMeshes.accent.scale.set(22,.5,1);
  // AC is visibly separate from the lighting controls.
  const acBody=box(1.15,.28,.22,.7,2.9,-4.38,cream);for(let i=0;i<4;i++)box(.95,.012,.01,.7,2.8+i*.035,-4.25,mat('#b3baad'));const acLED=sphere(.023,1.17,2.9,-4.23,mat('#a6c387'));
- const ambient=new T.HemisphereLight('#e8e3d3','#776b51',.5);scene.add(ambient);const sun=new T.DirectionalLight('#fff0cf',2);sun.position.set(3,9,5);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-9;sun.shadow.camera.right=9;sun.shadow.camera.top=9;sun.shadow.camera.bottom=-9;sun.shadow.normalBias=.03;scene.add(sun);
+ const ambient=new T.HemisphereLight('#e8e3d3','#776b51',.5);scene.add(ambient);const sun=new T.DirectionalLight('#fff0cf',2);sun.position.set(3,9,5);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-9;sun.shadow.camera.right=9;sun.shadow.camera.top=9;sun.shadow.camera.bottom=-9;sun.shadow.normalBias=.025;sun.shadow.camera.near=.5;sun.shadow.camera.far=35;scene.add(sun);
  const fill=new T.DirectionalLight('#e5e8df',.6);fill.position.set(-4,6,8);scene.add(fill);
  let angle=.67,top=false,drag=false,startX=0,startA=angle,lastState;let errorHandler;const render=()=>{try{renderer.render(scene,camera)}catch(error){if(errorHandler)errorHandler(error);else throw error}};function cameraUpdate(){if(top){camera.position.set(.01,20,.1);camera.lookAt(0,0,0)}else{camera.position.set(Math.sin(angle)*18,13,Math.cos(angle)*18);camera.lookAt(0,.2,0)}render()}
  function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/Math.max(r.height,1);camera.updateProjectionMatrix();cameraUpdate()}
  const onDown=e=>{if(e.button!==0&&e.pointerType==='mouse')return;drag=true;startX=e.clientX;startA=angle;canvas.setPointerCapture(e.pointerId)};const onMove=e=>{if(!drag||top)return;angle=Math.max(-.15,Math.min(1.25,startA+(e.clientX-startX)*.005));cameraUpdate()};const onUp=()=>{drag=false};canvas.addEventListener('pointerdown',onDown);canvas.addEventListener('pointermove',onMove);canvas.addEventListener('pointerup',onUp);canvas.addEventListener('pointercancel',onUp);
- function update(s){lastState=s;const b=s.brightness/100;for(const id of Object.keys(pointLights)){pointLights[id].intensity=s.lights[id]?b*({pendant:22,floor:14,accent:11}[id]):0;lightMeshes[id].material.emissiveIntensity=s.lights[id]?b*2.5:0;lightMeshes[id].material.color.set(s.lights[id]?'#f3d69f':'#8c897c')}ambient.intensity=s.day?.95:.33;sun.intensity=s.day?2.4:.6;fill.intensity=s.day?.7:.3;windowM.emissiveIntensity=s.day?.55:.03;windowM.color.set(s.day?'#c5d2b9':'#67796c');tv.emissiveIntensity=s.scene==='cinema'?.7:.1;acLED.visible=s.ac;renderer.toneMappingExposure=s.day?1.2:1.05;render()}
- resize();return{update,resize,setErrorHandler(handler){errorHandler=handler},view(value){top=!!value;angle=.67;cameraUpdate()},dispose(){canvas.removeEventListener('pointerdown',onDown);canvas.removeEventListener('pointermove',onMove);canvas.removeEventListener('pointerup',onUp);canvas.removeEventListener('pointercancel',onUp);scene.traverse(o=>o.geometry?.dispose());materials.forEach(m=>m.dispose());renderer.dispose()}};
+ function update(s){
+  lastState=s;const lighting=lightingState(s);
+  for(const [id,setting] of Object.entries(lighting.lamps)){
+   lampLights[id].intensity=setting.intensity;
+   lightMeshes[id].material.emissiveIntensity=setting.emission;
+   lightMeshes[id].material.color.set(setting.color);
+  }
+  ambient.intensity=lighting.ambient;sun.intensity=lighting.sun;fill.intensity=lighting.fill;
+  windowM.emissiveIntensity=lighting.windowEmission;windowM.color.set(lighting.windowColor);
+  tv.emissiveIntensity=lighting.televisionEmission;acLED.visible=s.ac;
+  scene.background.set(lighting.background);ground.material.color.set(lighting.background);
+  renderer.toneMappingExposure=lighting.exposure;render();
+ }
+ resize();return{update,resize,setErrorHandler(handler){errorHandler=handler},view(value){top=!!value;angle=.67;cameraUpdate()},dispose(){canvas.removeEventListener('pointerdown',onDown);canvas.removeEventListener('pointermove',onMove);canvas.removeEventListener('pointerup',onUp);canvas.removeEventListener('pointercancel',onUp);scene.traverse(o=>{o.geometry?.dispose();o.shadow?.map?.dispose();});materials.forEach(m=>m.dispose());renderer.dispose()}};
 }

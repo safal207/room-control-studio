@@ -69,7 +69,7 @@ async function boot({ firstUpdateFails = false } = {}) {
   await room.link(() => {}); await room.evaluate();
   const app = new vm.SourceTextModule(fs.readFileSync(path.join(project, 'dist/app.js'), 'utf8'), {
     context,
-    importModuleDynamically: async specifier => { assert.equal(specifier, './room.js?v=3'); await gate; return room; }
+    importModuleDynamically: async specifier => { assert.equal(specifier.split('?')[0], './room.js'); await gate; return room; }
   });
   await app.link(specifier => {
     const name = specifier.replace('./', '').split('.')[0];
