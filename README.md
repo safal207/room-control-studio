@@ -51,3 +51,11 @@ Creative direction and implementation: Alexey Safonov, with AI assistance. Code 
 ## Loading-state regression
 
 Camera choices made while the 3D module loads are retained and applied when it becomes ready. `npm run check` covers the deferred import race, scenario switches and thermostat bounds using a mocked DOM/renderer. It does not certify real WebGL rendering.
+
+## Learning flow and reliable visual fallback
+
+`#process` demonstrates **Away → Evening → Custom light**. Each step changes the actual shared state: zero lights / 0 W, three lights at 75% / 32 W, then one floor lamp at 50% / 4 W. The result sentence explains the current lights, brightness and estimated power.
+
+The original `diagram.js` floor plan is visible before the first successful 3D frame and after rendering or context-loss errors. It reacts to the same lighting, day/night and climate state as the 3D room. A visible switch lets learners compare the scheme and 3D. `assets/room-preview.svg` is generated from this scheme with the evening preset; it is an illustration, not a 3D screenshot.
+
+The controller hides the scheme only after the first state update renders successfully. Late state, resize and drag-render failures restore it, retain controls and expose a retry. The bounded controller test covers first-frame and late failures, context loss, retry, retained settings, the three lesson steps and the existing camera-loading race. DOM and GPU are mocked; real device rendering remains unverified.
